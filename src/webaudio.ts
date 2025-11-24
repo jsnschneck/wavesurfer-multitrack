@@ -92,16 +92,24 @@ class WebAudioPlayer {
     if (!this.paused) return
     this.paused = false
 
+    const offset = Math.max(0, this.playedDuration)
+    const bufferDuration = this.buffer?.duration ?? 0
+
     this.bufferNode?.disconnect()
+    this.bufferNode = null
+
+    if (!this.buffer || offset >= bufferDuration) {
+      // Nothing to play (e.g. placeholder track) – just keep the clock running.
+      this.playStartTime = this.audioContext.currentTime
+      this.emitEvent('play')
+      return
+    }
+
     this.bufferNode = this.audioContext.createBufferSource()
     this.bufferNode.buffer = this.buffer
     this.bufferNode.connect(this.gainNode)
 
-    const offset = this.playedDuration > 0 ? this.playedDuration : 0
-    const start =
-      this.playedDuration > 0 ? this.audioContext.currentTime : this.audioContext.currentTime - this.playedDuration
-
-    this.bufferNode.start(start, offset)
+    this.bufferNode.start(this.audioContext.currentTime, offset)
     this.playStartTime = this.audioContext.currentTime
     this.emitEvent('play')
   }
